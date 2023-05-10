@@ -7,13 +7,8 @@ requires-python = ">=3.8, <4.0"
 
 [tool.nonebot]
 adapters = [
-    { name = "OneBot V11", module_name = "nonebot.adapters.onebot.v11" },
-    { name = "mirai2", module_name = "nonebot.adapters.mirai2" },
-    { name = "OneBot V12", module_name = "nonebot.adapters.onebot.v12" },
-    { name = "Console", module_name = "nonebot.adapters.console" },
-    { name = "BilibiliLive", module_name = "nonebot.adapters.bilibili" },
-    { name = "Walle-Q", module_name = "nonebot_adapter_walleq" }
+    { name = "OneBot V11", module_name = "nonebot.adapters.onebot.v11" }
 ]
-plugins = ["nonebot_plugin_apscheduler", "nonebot_plugin_translator", "nonebot_plugin_gocqhttp", "nonebot_bison"]
+plugins = ["nonebot_plugin_apscheduler", "nonebot_plugin_translator", "nonebot_plugin_gocqhttp"]
 plugin_dirs = ["src/plugins"]
 builtin_plugins = ["echo"]
