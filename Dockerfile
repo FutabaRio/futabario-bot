@@ -1,29 +1,25 @@
-FROM python:3.10 as requirements_stage
+FROM python:3.8 as requirements-stage
 
-WORKDIR /wheel
+WORKDIR /tmp
 
-RUN python -m pip install --user pipx
+COPY ./pyproject.toml ./poetry.lock* /tmp/
 
-COPY ./pyproject.toml \
-  ./requirements.txt \
-  /wheel/
+RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py -o install-poetry.py
 
+RUN python install-poetry.py --yes
 
-RUN python -m pip wheel --wheel-dir=/wheel --no-cache-dir --requirement ./requirements.txt
+ENV PATH="${PATH}:/root/.local/bin"
 
-RUN python -m pipx run --no-cache nb-cli generate -f /tmp/bot.py
+RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
 
-
-FROM python:3.10-slim
+FROM tiangolo/uvicorn-gunicorn-fastapi:python3.8
 
 WORKDIR /app
 
-ENV TZ Asia/Shanghai
-ENV PYTHONPATH=/app
+COPY --from=requirements-stage /tmp/requirements.txt /app/requirements.txt
 
+# RUN python3 -m pip config set global.index-url https://mirrors.aliyun.com/pypi/simple
 
-RUN pip install --no-cache-dir gunicorn uvicorn[standard] nonebot2 \
-  && pip install --no-cache-dir --no-index --force-reinstall --find-links=/wheel -r /wheel/requirements.txt && rm -rf /wheel
-COPY . /app/
+RUN pip install --no-cache-dir --upgrade -r requirements.txt
 
-CMD ["nb","run"]
+RUN rm requirements.txt
