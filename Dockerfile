@@ -1,30 +1,38 @@
-# 使用基于yum的Python镜像作为基础镜像
-FROM python:3.10
+FROM python:3.10 as requirements_stage
 
-# 设置工作目录
+WORKDIR /wheel
+
+RUN python -m pip install --user pipx
+
+COPY ./pyproject.toml \
+  ./requirements.txt \
+  /wheel/
+
+
+RUN python -m pip wheel --wheel-dir=/wheel --no-cache-dir --requirement ./requirements.txt
+
+RUN python -m pipx run --no-cache nb-cli generate -f /tmp/bot.py
+
+
+FROM python:3.10-slim
+
 WORKDIR /app
 
-# 复制项目文件到容器中
-COPY . /app
+ENV TZ Asia/Shanghai
+ENV PYTHONPATH=/app
 
-# 安装项目依赖
-RUN python3 -m pip install --user pipx
-RUN python -m pipx ensurepath
+COPY ./docker/gunicorn_conf.py ./docker/start.sh /
+RUN chmod +x /start.sh
 
+ENV APP_MODULE _main:app
+ENV MAX_WORKERS 1
 
-# 创建一个新的脚本文件
-RUN echo '#!/bin/bash\npython -m pipx ensurepath\npipx install nb-cli' > setup.sh
+COPY --from=requirements_stage /tmp/bot.py /app
+COPY ./docker/_main.py /app
+COPY --from=requirements_stage /wheel /wheel
 
-# 赋予脚本文件执行权限
-RUN chmod +x setup.sh
+RUN pip install --no-cache-dir gunicorn uvicorn[standard] nonebot2 \
+  && pip install --no-cache-dir --no-index --force-reinstall --find-links=/wheel -r /wheel/requirements.txt && rm -rf /wheel
+COPY . /app/
 
-# 在容器启动时运行脚本文件
-CMD ["./setup.sh"]
-
-RUN pip install --no-cache-dir -r requirements.txt
-
-# 暴露项目的端口（如果有需要）
-EXPOSE 8888
-
-# 定义启动命令
-CMD ["nb", "run"]
+CMD ["/start.sh"]
