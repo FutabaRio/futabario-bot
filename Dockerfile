@@ -1,25 +1,20 @@
-FROM python:3.8 as requirements-stage
+# 使用基于yum的Python镜像作为基础镜像
+FROM python:3.10
 
-WORKDIR /tmp
-
-COPY ./pyproject.toml ./poetry.lock* /tmp/
-
-RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py -o install-poetry.py
-
-RUN python install-poetry.py --yes
-
-ENV PATH="${PATH}:/root/.local/bin"
-
-RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
-
-FROM tiangolo/uvicorn-gunicorn-fastapi:python3.8
-
+# 设置工作目录
 WORKDIR /app
 
-COPY --from=requirements-stage /tmp/requirements.txt /app/requirements.txt
+# 复制项目文件到容器中
+COPY . /app
 
-# RUN python3 -m pip config set global.index-url https://mirrors.aliyun.com/pypi/simple
+# 安装项目依赖
+RUN python3 -m pip install --user pipx
+RUN python -m pipx ensurepath
+RUN pipx install nb-cli
+RUN pip install --no-cache-dir -r requirements.txt
 
-RUN pip install --no-cache-dir --upgrade -r requirements.txt
+# 暴露项目的端口（如果有需要）
+EXPOSE 8888
 
-RUN rm requirements.txt
+# 定义启动命令
+CMD ["nb", "run"]
